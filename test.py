@@ -25,6 +25,7 @@ def main(_):
         # Load a previous checkpoint if we find one
         if is_load_model == True: saver.restore(sess, checkpoint_path)
 
+	'''
         state = 0x3200200000000000
         prediction1 = ai_2048.estimator.predict(sess, np.expand_dims(Board.get_arrayboard(state), 0))
         for i in range(4):
@@ -41,6 +42,7 @@ def main(_):
             print("------------------------------------------------")
 
         return 0
+	'''
         for iteration in xrange(max_iteration):
 
             state = Board.initialize()
