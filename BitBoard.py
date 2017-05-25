@@ -17,7 +17,7 @@ UP = 0
 RIGHT = 1
 DOWN = 2
 LEFT = 3
-
+penalty = -1
 class MoveTable(object):
 
 	def __init__(self):
@@ -133,19 +133,19 @@ class Board(object):
 		for i in xrange(4):
 			new_state |= np.int(movetable.movetable[Board.fetch(state,i)] * (1 << (16*i)))
 		if(new_state == state):
-			return state,-1
+			return state,penalty
 		else:
 			return new_state,score
 
-	@staticmethod
-	def printboard(state):
-		state = int(state)
-		print("-------------------------------------")
-		for i in xrange(4):
-			for j in xrange(4):
-				print(" %5d " % Board.at(state,i*4+j) , end = "")
-			print("")
-		print("-------------------------------------")
+	# @staticmethod
+	# def printboard(state):
+		# state = int(state)
+		# print("-------------------------------------")
+		# for i in xrange(4):
+		# 	for j in xrange(4):
+		# 		print(" %5d " % Board.at(state,i*4+j) , end = "")
+		# 	print("")
+		# print("-------------------------------------")
 
 	@staticmethod
 	def transpose(state):
@@ -187,36 +187,36 @@ class Board(object):
 		state = Board.flip(state)
 		return state
 
-	@staticmethod
-	def add_random_tile(state): 
-		state = int(state)
-		space = np.zeros([16])
-		space[:] = 0x0
-		num = 0
-		for i in xrange(16):
-			if(Board.at(state,i) == 0):
-				space[num] = i
-				num += 1
-		if (num > 0):
-			state = Board.set(state, np.int(space[np.random.randint(100) % num]), 2 if np.random.randint(4) == 0 else 1 )
-		return state
+	# @staticmethod
+	# def add_random_tile(state): 
+	# 	state = int(state)
+	# 	space = np.zeros([16])
+	# 	space[:] = 0x0
+	# 	num = 0
+	# 	for i in xrange(16):
+	# 		if(Board.at(state,i) == 0):
+	# 			space[num] = i
+	# 			num += 1
+	# 	if (num > 0):
+	# 		state = Board.set(state, np.int(space[np.random.randint(100) % num]), 2 if np.random.randint(4) == 0 else 1 )
+	# 	return state
 		
-	@staticmethod
-	def is_end(state):
-		state = int(state)
-		old_state = state
-		for i in xrange(4):
-			state, reward = Board.move(state,i)
-			if reward != -1:
-				return False
-		return True
+	# @staticmethod
+	# def is_end(state):
+	# 	state = int(state)
+	# 	old_state = state
+	# 	for i in xrange(4):
+	# 		state, reward = Board.move(state,i)
+	# 		if reward != penalty:
+	# 			return False
+	# 	return True
 
-	@staticmethod
-	def initialize():
-		state = 0x0
-		state = Board.add_random_tile(state)
-		state = Board.add_random_tile(state)
-		return state
+	# @staticmethod
+	# def initialize():
+	# 	state = 0x0
+	# 	state = Board.add_random_tile(state)
+	# 	state = Board.add_random_tile(state)
+	# 	return state
 
 	@staticmethod
 	def get_arrayboard(state):
@@ -327,11 +327,11 @@ class Board(object):
 		else:
 			print("[ERROR] No operation id %d" % operation_id)
 			return 0
-	@staticmethod
-	def get_maxtile(state):
-		state = int(state)
-		max_tile = 0
-		for i in xrange(16):
-			tile = Board.at(state,i)
-			if tile > max_tile: max_tile = tile
-		return max_tile
+	# @staticmethod
+	# def get_maxtile(state):
+	# 	state = int(state)
+	# 	max_tile = 0
+	# 	for i in xrange(16):
+	# 		tile = Board.at(state,i)
+	# 		if tile > max_tile: max_tile = tile
+	# 	return max_tile

@@ -8,26 +8,28 @@ import time
 import random
 from collections import namedtuple
 from datetime import datetime
+from BitBoard import penalty
+from Game import Game
 
-is_debug = False
+is_debug = True
 is_train = True
 # Hyper parameter
-discount_factor = 0.99
+discount_factor = 1
 
 # replay memory
-init_replay_memory_size = 100000
-replay_memory_size = 1000000
+init_replay_memory_size = 5000
+replay_memory_size = 50000
 
 batch_size = 64
-freq_update_target = 100000
+freq_update_target = 5000
 freq_save_model = 500
 
 max_iteration = 1000000
 learning_rate = 0.001
 
 # Epsilon
-initial_epsilon = 1
-final_epsilon = 0.1
+initial_epsilon = 0.51
+final_epsilon = 0.01
 explore_steps = 500000
 
 checkpoint_path = "checkpoint/"
@@ -35,10 +37,10 @@ is_load_model = False
 is_save_model = True
 
 if is_debug == True:
-    init_replay_memory_size = 2000
-    replay_memory_size = 10000
+    init_replay_memory_size = 1000
+    replay_memory_size = 3000
     batch_size = 32
-    freq_update_target = 1000
+    freq_update_target = 100
     max_iteration = 1000
     explore_steps = 10000
 
@@ -73,7 +75,7 @@ def main(_):
 
     Transition = namedtuple("Transition", ["state", "direction", "reward", "next_state", "done"])
     ai_2048 = AI()
-
+    game = Game()
     statistic = Statistic()
     print("[INFO] Populate the replay memory")
     with tf.Session() as sess:
@@ -86,7 +88,7 @@ def main(_):
         if is_load_model == True: saver.restore(sess, checkpoint_path)
 
         replay_memory = []
-        state = Board.initialize()
+        game.initialize()
         
         while(len(replay_memory) < init_replay_memory_size):
             # print(len(replay_memory))
@@ -95,18 +97,14 @@ def main(_):
                 sys.stdout.flush()
 
             # choose a direction
-            direction = ai_2048.getbestdirection(sess, state, epsilon)
-            statistic.action[direction] += 1
-
-            # execute the action
-            new_state,reward = Board.move(state, direction)
-            if reward == -1: continue
-            new_state = Board.add_random_tile(new_state)
-            done = Board.is_end(new_state)
+            direction = ai_2048.getbestdirection(sess, game.state, epsilon)
+            state,new_state,reward, done = game.move(direction)
             replay_memory.append(Transition(state, direction, reward, new_state, done))
 
+            statistic.action[direction] += 1
+
             if done:
-                state = Board.initialize()
+                game.initialize()
 
         print("[INFO] Populating replay memory... %3f%% \r" % (len(replay_memory) * 100. / init_replay_memory_size), end="")
         print("\n[INFO] Populating replay memory end!")
@@ -119,25 +117,19 @@ def main(_):
         avg_score = 0
         for iteration in xrange(max_iteration):
 
-            state = Board.initialize()
-            score = 0
-            illegal_count = 0
+            game.initialize()
+
             while(True):
                 global_step += 1
                 # choose a direction
                 
-                direction = ai_2048.getbestdirection(sess, state, epsilon)
+                direction = ai_2048.getbestdirection(sess, game.state, epsilon)
+                state,new_state,reward, done = game.move(direction)
+
                 statistic.action[direction] += 1
                 epsilon -= (epsilon-final_epsilon)/explore_steps
 
-                # execute the action
-                new_state,reward = Board.move(state,direction)
-                if reward == -1: 
-                	illegal_count += 1
-                	continue
-            	new_state = Board.add_random_tile(new_state)
-                score += reward
-                done = Board.is_end(new_state)
+                replay_memory.append(Transition(state, direction, reward, new_state, done))
 
                 if is_train == True:
                     if len(replay_memory) > replay_memory_size:
@@ -167,36 +159,36 @@ def main(_):
 
                     loss = ai_2048.update_estimator(sess, states_batch_array, action_batch, targets_batch, learning_rate)
 
-                    tmp_max_tile = Board.get_maxtile(state)
+                    tmp_max_tile = game.get_maxtile()
                     if tmp_max_tile > max_tile: max_tile = tmp_max_tile
-                    statistic.set(learning_rate, max_score,last_iteration_score, iteration+1, epsilon, global_step, loss, max_tile, illegal_count)
+                    statistic.set(learning_rate, max_score,last_iteration_score, iteration+1, epsilon, global_step, loss, max_tile, game.illegal_count)
 
                     # update the target network
-                    # if global_step % freq_update_target == 0:
-                    if done:
+                    if global_step % freq_update_target == 0:
+                    # if done:
                         ai_2048.update_target(sess)
 
                 state = new_state
 
                 if done:
-                    avg_score += score
+                    avg_score += game.score
                     if ((iteration+1) % 50) == 0:
                         print ("[%s] Iteration %d, max score: %d, max_tile: %d, score: %d, average score: %f" 
-                            % ((datetime.strftime(datetime.now(), "%Y/%m/%d %H:%M:%S"), iteration+1, max_score, max_tile,score, avg_score*1./50,)), end="")
+                            % ((datetime.strftime(datetime.now(), "%Y/%m/%d %H:%M:%S"), iteration+1, max_score, max_tile,game.score, avg_score*1./50,)), end="")
                         if is_train == True:
                             print(", loss: %f" % loss, end='')
                         print("")
                         avg_score = 0
                     
                     sys.stdout.flush()
-                    max_score = score if score > max_score else max_score
-                    last_iteration_score = score
+                    max_score = game.score if game.score > max_score else max_score
+                    last_iteration_score = game.score
                     break
 
-            ai_2048.estimator.write_summary(statistic)
-            
-            if(iteration+1) % freq_save_model == 0 and is_save_model == True:
-                saver.save(sess, checkpoint_path, global_step = iteration+1)
+            if is_debug == False:
+                ai_2048.estimator.write_summary(statistic)
+                if(iteration+1) % freq_save_model == 0 and is_save_model == True:
+                    saver.save(sess, checkpoint_path, global_step = iteration+1)
 
         tend = time.time()
         print("Execution time: %f" % (tend - tstart))

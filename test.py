@@ -7,10 +7,10 @@ import os, sys
 import random
 
 # Hyper parameter
-max_iteration = 100
+max_iteration = 10
 initial_epsilon = 0.01
 # replay memory
-checkpoint_path = "checkpoint/-21500"
+checkpoint_path = "checkpoint/-1000"
 is_load_model = True
 
 def main(_):
