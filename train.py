@@ -11,7 +11,7 @@ from datetime import datetime
 from BitBoard import penalty
 from Game import Game
 
-is_debug = True
+is_debug = False
 is_train = True
 # Hyper parameter
 discount_factor = 1

@@ -99,13 +99,14 @@ class DQN(object):
 	def to_one_hot_input(self, state):
 		one_hot_input = []
 		for s in state:
-			one_hot_each_state = []
+			one_hot_each_state = np.zeros(256)
 			for i in range(16):
-				for j in range(16):
-					if j == s[i]:
-						one_hot_each_state.append(1)
-					else:
-						one_hot_each_state.append(0)
+				one_hot_each_state[i*16+s[i]] = 1 
+				# for j in range(16):
+				# 	if j == s[i]:
+				# 		one_hot_each_state.append(1)
+				# 	else:
+				# 		one_hot_each_state.append(0)
 			one_hot_input.append(one_hot_each_state)
 		return one_hot_input
 
