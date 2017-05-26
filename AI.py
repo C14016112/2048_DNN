@@ -5,7 +5,7 @@ import tensorflow as tf
 class AI(object):
 
 	def __init__(self):
-		self.estimator = DQN(scope='estimator', summaries_dir = 'summaries_estimator')
+		self.estimator = DQN(scope='estimator', summaries_dir = 'log')
 		self.target = DQN(scope='target', summaries_dir = None)
 		self.update_op = []
 

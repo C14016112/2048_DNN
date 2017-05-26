@@ -11,7 +11,7 @@ from datetime import datetime
 from BitBoard import penalty
 from Game import Game
 
-is_debug = False
+is_debug = True
 is_train = True
 # Hyper parameter
 discount_factor = 1
@@ -28,11 +28,11 @@ max_iteration = 1000000
 learning_rate = 0.001
 
 # Epsilon
-initial_epsilon = 0.51
+initial_epsilon = 0.5
 final_epsilon = 0.01
-explore_steps = 500000
+explore_steps = 1000000
 
-checkpoint_path = "checkpoint/"
+checkpoint_path = "log/checkpoint/"
 is_load_model = False
 is_save_model = True
 
@@ -85,7 +85,8 @@ def main(_):
 
         saver = tf.train.Saver()
         # Load a previous checkpoint if we find one
-        if is_load_model == True: saver.restore(sess, checkpoint_path)
+        # if is_load_model == True: saver.restore(sess, checkpoint_path)
+        if is_load_model == True: saver.restore(sess, 'log/checkpoint/-29500')
 
         replay_memory = []
         game.initialize()
@@ -168,7 +169,6 @@ def main(_):
                     # if done:
                         ai_2048.update_target(sess)
 
-                state = new_state
 
                 if done:
                     avg_score += game.score

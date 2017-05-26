@@ -44,7 +44,7 @@ class Game(object):
 		self.previous_state = self.state
 		self.state, reward = Board.move(self.state, direction)
 		done = self.is_teminate()
-		if reward < 0: self.illegal_count += 1
+		self.illegal_count = 1 if reward < 0 else 0
 		self.score += reward
 		self.add_random_tile()
 		return self.previous_state, self.state, reward, done

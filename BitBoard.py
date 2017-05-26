@@ -17,7 +17,7 @@ UP = 0
 RIGHT = 1
 DOWN = 2
 LEFT = 3
-penalty = -10
+penalty = -20
 class MoveTable(object):
 
 	def __init__(self):

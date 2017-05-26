@@ -11,6 +11,7 @@ class DQN(object):
 		self.summary_action_writer = []
 		self.is_bn = True
 		self.is_dropout = True
+		self.keep_prob = 0.8
 		self.count = 0
 		with tf.variable_scope(scope):
 			self.build_model()
@@ -27,6 +28,11 @@ class DQN(object):
 					self.summary_action_writer.append(tf.summary.FileWriter(action_dir))
 		sys.stdout.flush()
 
+	def fully_connected(self, input, width, scope, activation_fn = tf.nn.relu, is_bn = True, is_dropout=True):
+		result = tf.contrib.layers.fully_connected(input, width, scope=scope, activation_fn=activation_fn)
+		result = tf.layers.batch_normalization(result) if (is_bn&self.is_bn) == True else result
+		result = tf.nn.dropout(result, self.keep_prob) if (is_dropout&self.is_dropout) == True else result
+		return result
 
 	def build_model(self):
 		self.lr = tf.placeholder(shape=[], dtype=tf.float32, name="learning_rate")
@@ -38,17 +44,12 @@ class DQN(object):
 		X = tf.to_float(self.X) / 15.
 		batch_size = tf.shape(self.X)[0]
 
-		self.layer1 = tf.contrib.layers.fully_connected(X, 1024, scope='layer1', activation_fn=tf.nn.relu)
-		self.layer1 = tf.layers.batch_normalization(self.layer1) if self.is_bn == True else self.layer1
-		self.layer1 = tf.nn.dropout(self.layer1, 0.8) if self.is_dropout == True else self.layer1
-		self.layer2 = tf.contrib.layers.fully_connected(self.layer1, 512, scope='layer2', activation_fn=tf.nn.relu)
-		self.layer2 = tf.layers.batch_normalization(self.layer2) if self.is_bn == True else self.layer2
-		self.layer2 = tf.nn.dropout(self.layer2, 0.8) if self.is_dropout == True else self.layer2
-		self.layer3 = tf.contrib.layers.fully_connected(self.layer2, 256, scope='layer3', activation_fn=tf.nn.relu)
-		self.layer3 = tf.layers.batch_normalization(self.layer3) if self.is_bn == True else self.layer3
-		self.layer3 = tf.nn.dropout(self.layer3, 0.8) if self.is_dropout == True else self.layer3
-
-		self.predictions = tf.contrib.layers.fully_connected(self.layer3, 4, scope='predictions')
+		self.layer1 = self.fully_connected(X, 256, 'layer1', tf.nn.relu)
+		self.layer2 = self.fully_connected(self.layer1, 256, 'layer2', tf.nn.relu)
+		self.layer3 = self.fully_connected(self.layer2, 256, 'layer3', tf.nn.relu)
+		self.layer4 = self.fully_connected(self.layer3, 256, 'layer4', tf.nn.relu)
+		self.layer5 = self.fully_connected(self.layer4, 256, 'layer5', tf.nn.relu)
+		self.predictions = self.fully_connected(self.layer5, 4, 'prediction', None, False, False)
 
 		self.gather_indices = tf.range(batch_size) * tf.shape(self.predictions)[1] + self.actions
 		self.action_predictions = tf.gather(tf.reshape(self.predictions, [-1]), self.gather_indices)
