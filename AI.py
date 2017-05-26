@@ -38,6 +38,7 @@ class AI(object):
 		for i in range(4):
 			tmp_state, reward = Board.move(state, i)
 			q_values[i] += reward
+		# print(q_values)
 		best_action = np.argmax(q_values)
 		action_prob[best_action] += (1.0 - epsilon)
 		action = np.random.choice(np.arange(len(action_prob)), p=action_prob)

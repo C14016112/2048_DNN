@@ -228,16 +228,24 @@ class Board(object):
 
 	@staticmethod
 	def get_feature_state(state):
-		# [origin, rotate right 1, rotate right 2, rotate right 3, mirror, flip, transpose, reverse]
+		# [origin, rotate right 1, rotate right 2, rotate left 1, mirror, flip, transpose, reverse]
 		# [  0   ,       1       ,        2      ,       3       ,   4   ,   5 ,     6    ,    7   ]
 		state = int(state)
 		smallest_state = state
 		operation_id = 0
-		for i in range(3):
-			new_state = Board.rotate_right(state)
-			if(new_state < smallest_state):
-				smallest_state = new_state
-				operation_id = i+1
+
+		new_state = Board.rotate_right(state)
+		if new_state < smallest_state:
+			smallest_state = new_state
+			operation_id = 1
+		new_state = Board.rotate_right(Board.rotate_right(state))
+		if new_state < smallest_state:
+			smallest_state = new_state
+			operation_id = 2
+		new_state = Board.rotate_left(state)
+		if new_state < smallest_state:
+			smallest_state = new_state
+			operation_id = 3
 		new_state = Board.mirror(state)
 		if new_state < smallest_state:
 			smallest_state = new_state
@@ -284,25 +292,19 @@ class Board(object):
 	def operation_id_to_action(operation_id, action):
 		# [origin, rotate right 1, rotate right 2, rotate right 3, mirror, flip, transpose, reverse]
 		# [  0   ,       1       ,        2      ,       3       ,   4   ,   5 ,     6    ,    7   ]
-		if operation_id == 0:
-			return action
-		elif operation_id == 1:
-			return (action+1) % 4
-		elif operation_id == 2:
-			return (action+2) % 4
-		elif operation_id == 3:
-			return (action+3) % 4
+		if operation_id < 4:
+			return (action+4-operation_id) % 4
 		elif operation_id == 4:
 			if action == 1:
-				return 2
-			elif action == 2:
+				return 3
+			elif action == 3:
 				return 1 
 			else:
 				return action
 		elif operation_id == 5:
 			if action == 0:
-				return 3
-			elif action == 3:
+				return 2
+			elif action == 2:
 				return 0
 			else:
 				return action		
@@ -317,13 +319,13 @@ class Board(object):
 				return 0
 		elif operation_id == 7:
 			if action == 0:
-				return 3
-			elif action == 1:
 				return 2
+			elif action == 1:
+				return 3
 			elif action == 2:
-				return 1
-			elif action == 3:
 				return 0
+			elif action == 3:
+				return 1
 		else:
 			print("[ERROR] No operation id %d" % operation_id)
 			return 0

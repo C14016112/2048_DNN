@@ -9,8 +9,8 @@ class DQN(object):
 		self.scope = scope
 		self.summary_writer = None
 		self.summary_action_writer = []
-		self.is_bn = True
-		self.is_dropout = True
+		self.is_bn = False
+		self.is_dropout = False
 		self.keep_prob = 0.8
 		self.count = 0
 		with tf.variable_scope(scope):
@@ -44,12 +44,12 @@ class DQN(object):
 		X = tf.to_float(self.X) / 15.
 		batch_size = tf.shape(self.X)[0]
 
-		self.layer1 = self.fully_connected(X, 256, 'layer1', tf.nn.relu)
-		self.layer2 = self.fully_connected(self.layer1, 256, 'layer2', tf.nn.relu)
+		self.layer1 = self.fully_connected(X, 1024, 'layer1', tf.nn.relu)
+		self.layer2 = self.fully_connected(self.layer1, 512, 'layer2', tf.nn.relu)
 		self.layer3 = self.fully_connected(self.layer2, 256, 'layer3', tf.nn.relu)
-		self.layer4 = self.fully_connected(self.layer3, 256, 'layer4', tf.nn.relu)
-		self.layer5 = self.fully_connected(self.layer4, 256, 'layer5', tf.nn.relu)
-		self.predictions = self.fully_connected(self.layer5, 4, 'prediction', None, False, False)
+		# self.layer4 = self.fully_connected(self.layer3, 256, 'layer4', tf.nn.relu)
+		# self.layer5 = self.fully_connected(self.layer4, 256, 'layer5', tf.nn.relu)
+		self.predictions = self.fully_connected(self.layer3, 4, 'prediction', None, False, False)
 
 		self.gather_indices = tf.range(batch_size) * tf.shape(self.predictions)[1] + self.actions
 		self.action_predictions = tf.gather(tf.reshape(self.predictions, [-1]), self.gather_indices)
@@ -103,11 +103,6 @@ class DQN(object):
 			one_hot_each_state = np.zeros(256)
 			for i in range(16):
 				one_hot_each_state[i*16+s[i]] = 1 
-				# for j in range(16):
-				# 	if j == s[i]:
-				# 		one_hot_each_state.append(1)
-				# 	else:
-				# 		one_hot_each_state.append(0)
 			one_hot_input.append(one_hot_each_state)
 		return one_hot_input
 
