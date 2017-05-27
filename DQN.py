@@ -39,7 +39,7 @@ class DQN(object):
 		self.X = tf.placeholder(shape = [None,256], dtype = tf.uint8, name = 'X')
 		# the target q value predicted by target network
 		self.Y = tf.placeholder(shape = [None], dtype=tf.float32, name='Y')
-		self.actions = tf.placeholder(shape=[None], dtype=tf.int32, name='actions')
+		# self.actions = tf.placeholder(shape=[None], dtype=tf.int32, name='actions')
 
 		X = tf.to_float(self.X) / 15.
 		batch_size = tf.shape(self.X)[0]
@@ -49,11 +49,11 @@ class DQN(object):
 		self.layer3 = self.fully_connected(self.layer2, 256, 'layer3', tf.nn.relu)
 		# self.layer4 = self.fully_connected(self.layer3, 256, 'layer4', tf.nn.relu)
 		# self.layer5 = self.fully_connected(self.layer4, 256, 'layer5', tf.nn.relu)
-		self.predictions = self.fully_connected(self.layer3, 4, 'prediction', None, False, False)
+		self.predictions = self.fully_connected(self.layer3, 1, 'prediction', None, False, False)
 
-		self.gather_indices = tf.range(batch_size) * tf.shape(self.predictions)[1] + self.actions
-		self.action_predictions = tf.gather(tf.reshape(self.predictions, [-1]), self.gather_indices)
-		self.losses = tf.squared_difference(self.Y, self.action_predictions)
+		# self.gather_indices = tf.range(batch_size) * tf.shape(self.predictions)[1] + self.actions
+		# self.action_predictions = tf.gather(tf.reshape(self.predictions, [-1]), self.gather_indices)
+		self.losses = tf.squared_difference(self.Y, self.predictions)
 		self.loss = tf.reduce_mean(self.losses)
 		self.op = tf.train.RMSPropOptimizer(self.lr)
 		# self.op = tf.train.AdamOptimizer(self.lr)
@@ -73,7 +73,7 @@ class DQN(object):
 		feed_dict = {
 			self.X : one_hot_state,
 			self.Y : label,
-			self.actions : action,
+			# self.actions : action,
 			self.lr : learning_rate
 		}
 		loss, _, predictions = sess.run([self.loss, self.train_step, self.predictions], feed_dict)

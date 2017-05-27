@@ -11,19 +11,19 @@ from datetime import datetime
 from BitBoard import penalty
 from Game import Game
 
-is_debug = False
+is_debug = True
 is_train = True
 # Hyper parameter
 discount_factor = 1
 
 # replay memory
-init_replay_memory_size = 5000
-replay_memory_size = 50000
+init_replay_memory_size = 128
+replay_memory_size = 128
 
 batch_size = 64
 freq_update_target = 5000
 freq_save_model = 500
-freq_print_info = 1
+freq_print_info = 50
 
 max_iteration = 1000000
 learning_rate = 0.001
@@ -38,12 +38,13 @@ is_load_model = False
 is_save_model = True
 
 if is_debug == True:
-    init_replay_memory_size = 1000
-    replay_memory_size = 3000
+    init_replay_memory_size = 128
+    replay_memory_size = 128
     batch_size = 32
     freq_update_target = 100
     max_iteration = 1000
     explore_steps = 10000
+    freq_print_info = 1
 
 
 class Statistic(object):
@@ -75,21 +76,8 @@ def update(replay_memory, mini_batch_size, ai, sess, lr):
     samples = random.sample(replay_memory, mini_batch_size)
     states_batch, array_states_batch, action_batch, reward_batch, next_states_batch, next_array_states_batch, done_batch = map(np.array, zip(*samples))
 
-    # calculate target Q values by target network
-    # next_states_batch_array = []
-    # for next_state in next_states_batch:
-    #     next_states_batch_array.append(Board.get_arrayboard(next_state))
-
-	# q_values_next = ai.estimator.predict(sess, next_states_batch_array)
- 	# best_actions = np.argmax(q_values_next, axis = 1)
-    best_actions = [ai.getbestdirection(sess, next_states_batch[t], 0) for t in xrange(mini_batch_size)]
     q_values_next_target = ai.target.predict(sess, next_array_states_batch)
-    targets_batch = reward_batch + np.invert(done_batch).astype(np.float32) * discount_factor * q_values_next_target[np.arange(mini_batch_size), best_actions]
-
-    # update the estimator network
-    # states_batch_array = []
-    # for s in states_batch:
-    #     states_batch_array.append(Board.get_arrayboard(s))
+    targets_batch = reward_batch + np.invert(done_batch).astype(np.float32) * discount_factor * q_values_next_target[np.arange(mini_batch_size)][0]
 
     loss = ai.update_estimator(sess, array_states_batch, action_batch, targets_batch, lr)
     return loss
@@ -148,13 +136,17 @@ def main(_):
             game.initialize()
 
             while(True):
+                # game.printboard()
                 global_step += 1
                 # choose a direction
                 
-                direction = ai_2048.getbestdirection(sess, game.state, epsilon)
-                state,new_state,reward, done = game.move(direction)
+                feature_state, id = Board.get_feature_state(game.state)
+                direction = ai_2048.getbestdirection(sess, feature_state, epsilon)
+                real_direction = Board.operation_id_to_action(id, direction)
+                state,new_state,reward, done = game.move(real_direction)
+                new_feature_state, _ = Board.get_feature_state(new_state)
 
-                statistic.action[direction] += 1
+                statistic.action[real_direction] += 1
                 epsilon -= (epsilon-final_epsilon)/explore_steps
 
                 current_max_tile = game.get_maxtile()
@@ -165,14 +157,18 @@ def main(_):
                     if len(replay_memory) > replay_memory_size:
                         replay_memory.pop(0)
 
-                    if len(replay_memory_large_tile) > replay_memory_size / 10:
+                    if len(replay_memory_large_tile) > replay_memory_size:
                         replay_memory_large_tile.pop(0)
 
-                    replay_memory.append(Transition(state, Board.get_arrayboard(state), direction, reward, new_state, Board.get_arrayboard(new_state), done))
+                    replay_memory.append(Transition(feature_state, Board.get_arrayboard(feature_state), direction,
+                     reward, new_feature_state, Board.get_arrayboard(new_feature_state), done))
                     if current_max_tile >= 8: 
-                    	replay_memory_large_tile.append(Transition(state, Board.get_arrayboard(state), direction, reward, new_state, Board.get_arrayboard(new_state), done))
+                        replay_memory_large_tile.append(Transition(feature_state, Board.get_arrayboard(feature_state), 
+                            direction,reward, new_feature_state, Board.get_arrayboard(new_feature_state), done))
 
-                    loss = (update(replay_memory, batch_size, ai_2048, sess, learning_rate) + update(replay_memory_large_tile, batch_size, ai_2048, sess, learning_rate)) / 2
+
+                    loss = (update(replay_memory, batch_size, ai_2048, sess, learning_rate) 
+                    	+ update(replay_memory_large_tile, batch_size, ai_2048, sess, learning_rate)) / 2
 
                     statistic.set(learning_rate, max_score,last_iteration_score, iteration+1, epsilon, global_step, loss, max_tile, game.illegal_count)
 
@@ -186,7 +182,7 @@ def main(_):
                     avg_score += game.score
                     if ((iteration+1) % freq_print_info) == 0:
                         print ("[%s] Iteration %d, max score: %d, max_tile: %d, score: %d, average score: %f" 
-                            % ((datetime.strftime(datetime.now(), "%Y/%m/%d %H:%M:%S"), iteration+1, max_score, max_tile,game.score, avg_score*1./50,)), end="")
+                            % ((datetime.strftime(datetime.now(), "%Y/%m/%d %H:%M:%S"), iteration+1, max_score, max_tile,game.score, avg_score*1./freq_print_info,)), end="")
                         if is_train == True:
                             print(", loss: %f" % loss, end='')
                         print("")

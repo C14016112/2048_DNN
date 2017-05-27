@@ -17,7 +17,7 @@ UP = 0
 RIGHT = 1
 DOWN = 2
 LEFT = 3
-penalty = -20
+penalty = -1
 class MoveTable(object):
 
 	def __init__(self):
@@ -293,7 +293,7 @@ class Board(object):
 		# [origin, rotate right 1, rotate right 2, rotate right 3, mirror, flip, transpose, reverse]
 		# [  0   ,       1       ,        2      ,       3       ,   4   ,   5 ,     6    ,    7   ]
 		if operation_id < 4:
-			return (action+4-operation_id) % 4
+			return ( action+4-operation_id) % 4
 		elif operation_id == 4:
 			if action == 1:
 				return 3
@@ -329,11 +329,3 @@ class Board(object):
 		else:
 			print("[ERROR] No operation id %d" % operation_id)
 			return 0
-	# @staticmethod
-	# def get_maxtile(state):
-	# 	state = int(state)
-	# 	max_tile = 0
-	# 	for i in xrange(16):
-	# 		tile = Board.at(state,i)
-	# 		if tile > max_tile: max_tile = tile
-	# 	return max_tile
