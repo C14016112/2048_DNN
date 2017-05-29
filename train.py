@@ -103,7 +103,6 @@ def main(_):
         game.initialize()
 
         while(len(replay_memory) < init_replay_memory_size):
-            # print(len(replay_memory))
             if len(replay_memory) % (init_replay_memory_size / 100) == 0:
                 print("[INFO] Populating replay memory... %3.3f%% \r" % (len(replay_memory) * 100. / init_replay_memory_size), end="")
                 sys.stdout.flush()
