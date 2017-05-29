@@ -8,13 +8,13 @@ class AI(object):
 		self.estimator = DQN(scope='estimator', summaries_dir = 'log')
 		self.target = DQN(scope='target', summaries_dir = None)
 		self.update_op = []
-
+		self.smooth = 0.9
 		variables_estimator = [t for t in tf.trainable_variables() if t.name.startswith(self.estimator.scope)]
 		variables_estimator = sorted(variables_estimator, key = lambda v: v.name)
 		variables_target = [t for t in tf.trainable_variables() if t.name.startswith(self.target.scope)]
 		variables_target = sorted(variables_target, key = lambda v: v.name)
 		for n_estimator, n_target in zip(variables_estimator, variables_target):
-			op = n_target.assign(n_estimator)
+			op = n_target.assign(n_target*self.smooth + n_estimator * (1-self.smooth))
 			self.update_op.append(op)
 
 	def getbestdirection(self, sess, state, epsilon):

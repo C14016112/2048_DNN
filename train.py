@@ -11,7 +11,7 @@ from datetime import datetime
 from BitBoard import penalty
 from Game import Game
 
-is_debug = False
+is_debug = True
 is_train = True
 # Hyper parameter
 discount_factor = 1
@@ -172,8 +172,8 @@ def main(_):
                     statistic.set(learning_rate, max_score,last_iteration_score, iteration+1, epsilon, global_step, loss, max_tile, game.illegal_count)
 
                     # update the target network
-                    if global_step % freq_update_target == 0:
-                    # if done:
+                    # if global_step % freq_update_target == 0:
+                    if done:
                         ai_2048.update_target(sess)
 
 
