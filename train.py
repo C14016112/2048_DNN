@@ -11,7 +11,7 @@ from datetime import datetime
 from BitBoard import penalty
 from Game import Game
 
-is_debug = True
+is_debug = False
 is_train = True
 # Hyper parameter
 discount_factor = 1
@@ -74,19 +74,16 @@ class Statistic(object):
 def update(replay_memory, mini_batch_size, ai, sess, lr):
     # sample a minibatch from replay buffer. 
     samples = random.sample(replay_memory, mini_batch_size)
-    states_batch, array_states_batch, action_batch, reward_batch, next_states_batch, next_array_states_batch, done_batch = map(np.array, zip(*samples))
-
-    q_values_next_target = ai.target.predict(sess, next_array_states_batch)
-    targets_batch = reward_batch + np.invert(done_batch).astype(np.float32) * discount_factor * q_values_next_target[np.arange(mini_batch_size)][0]
-
-    loss = ai.update_estimator(sess, array_states_batch, action_batch, targets_batch, lr)
+    after_state_array_batch, action_batch, reward_batch, next_target_value_batch, done_batch = map(np.array, zip(*samples))
+    targets_batch = reward_batch + np.invert(done_batch).astype(np.float32) * discount_factor * np.array(next_target_value_batch).flatten()
+    loss = ai.update_estimator(sess, after_state_array_batch, action_batch, targets_batch, lr)
     return loss
 
 def main(_):
     global_step = 0
     epsilon = initial_epsilon
 
-    Transition = namedtuple("Transition", ["state", "array_state", "direction", "reward", "next_state", "next_array_state", "done"])
+    Transition = namedtuple("Transition", ["after_state_array", "direction", "reward", "next_state_value", "done"])
     ai_2048 = AI()
     game = Game()
     statistic = Statistic()
@@ -104,7 +101,7 @@ def main(_):
         replay_memory = []
         replay_memory_large_tile = []
         game.initialize()
-        
+
         while(len(replay_memory) < init_replay_memory_size):
             # print(len(replay_memory))
             if len(replay_memory) % (init_replay_memory_size / 100) == 0:
@@ -112,15 +109,20 @@ def main(_):
                 sys.stdout.flush()
 
             # choose a direction
-            direction = ai_2048.getbestdirection(sess, game.state, epsilon)
-            state,new_state,reward, done = game.move(direction)
-            replay_memory.append(Transition(state, Board.get_arrayboard(state), direction, reward, new_state, Board.get_arrayboard(new_state), done))
-            replay_memory_large_tile.append(Transition(state, Board.get_arrayboard(state), direction, reward, new_state, Board.get_arrayboard(new_state), done))
+            direction = ai_2048.getbestdirection(sess, [game.state], epsilon)
+            state, after_state, new_state,reward, done = game.move(direction[0])
+            next_dir = ai_2048.getbestdirection(sess, [game.state], epsilon)
+            next_after_state,_ = Board.move(new_state, next_dir)
+            next_state_value = ai_2048.target.predict(sess, [Board.get_arrayboard(next_after_state)])
 
-            statistic.action[direction] += 1
+            replay_memory.append(Transition(Board.get_arrayboard(after_state), direction[0], reward, next_state_value, done))
+            replay_memory_large_tile.append(Transition(Board.get_arrayboard(after_state), direction[0], reward, next_state_value, done))
+
+            statistic.action[direction[0]] += 1
 
             if done:
                 game.initialize()
+                
 
         print("[INFO] Populating replay memory... %3f%% \r" % (len(replay_memory) * 100. / init_replay_memory_size), end="")
         print("\n[INFO] Populating replay memory end!")
@@ -136,17 +138,16 @@ def main(_):
             game.initialize()
 
             while(True):
-                # game.printboard()
                 global_step += 1
                 # choose a direction
                 
-                feature_state, id = Board.get_feature_state(game.state)
-                direction = ai_2048.getbestdirection(sess, feature_state, epsilon)
-                real_direction = Board.operation_id_to_action(id, direction)
-                state,new_state,reward, done = game.move(real_direction)
-                new_feature_state, _ = Board.get_feature_state(new_state)
+                direction = ai_2048.getbestdirection(sess, [game.state], epsilon)
+                state, after_state, new_state,reward, done = game.move(direction[0])
+                next_dir = ai_2048.getbestdirection(sess, [game.state], epsilon)
+                next_after_state,_ = Board.move(new_state, next_dir)
+                next_state_value = ai_2048.target.predict(sess, [Board.get_arrayboard(next_after_state)])
 
-                statistic.action[real_direction] += 1
+                statistic.action[direction[0]] += 1
                 epsilon -= (epsilon-final_epsilon)/explore_steps
 
                 current_max_tile = game.get_maxtile()
@@ -160,15 +161,13 @@ def main(_):
                     if len(replay_memory_large_tile) > replay_memory_size:
                         replay_memory_large_tile.pop(0)
 
-                    replay_memory.append(Transition(feature_state, Board.get_arrayboard(feature_state), direction,
-                     reward, new_feature_state, Board.get_arrayboard(new_feature_state), done))
+                    replay_memory.append(Transition(Board.get_arrayboard(after_state), direction[0], reward, next_state_value, done))
                     if current_max_tile >= 8: 
-                        replay_memory_large_tile.append(Transition(feature_state, Board.get_arrayboard(feature_state), 
-                            direction,reward, new_feature_state, Board.get_arrayboard(new_feature_state), done))
+                        replay_memory_large_tile.append(Transition(Board.get_arrayboard(after_state), direction[0], reward, next_state_value, done))
 
 
                     loss = (update(replay_memory, batch_size, ai_2048, sess, learning_rate) 
-                    	+ update(replay_memory_large_tile, batch_size, ai_2048, sess, learning_rate)) / 2
+                        + update(replay_memory_large_tile, batch_size, ai_2048, sess, learning_rate)) / 2
 
                     statistic.set(learning_rate, max_score,last_iteration_score, iteration+1, epsilon, global_step, loss, max_tile, game.illegal_count)
 

@@ -22,8 +22,8 @@ class AI(object):
 		# array_state = Board.get_arrayboard(feature_state)
 		# best_dir = self.epsilon_policy(sess, array_state, epsilon)
 		# best_dir = Board.operation_id_to_action(op_id, best_dir)
-		best_dir = self.epsilon_policy(sess, state, epsilon)
-		return best_dir
+		best_dirs = self.epsilon_policy(sess, state, epsilon)
+		return best_dirs
 
 	def update_estimator(self, sess, state, action, label, learning_rate):
 		loss = self.estimator.update(sess, state, action, label, learning_rate)
@@ -33,15 +33,17 @@ class AI(object):
 		sess.run(self.update_op)
 
 	def epsilon_policy(self, sess, state, epsilon):
-		best_dir = 0
-		best_val = -1
-		for i in range(4):
-			new_state, reward = Board.move(state, i)
-			if new_state == state: continue
-			value = self.estimator.predict(sess, np.expand_dims(Board.get_arrayboard(new_state), 0))[0]
-			if value + reward > best_val:
-				best_val = value + reward
-				best_dir = i
-			# print(i, " ", value + reward)
-		return best_dir
+		best_dirs = []
+		for s in state:
+			best_dir = 0
+			best_val = -1
+			for i in range(4):
+				new_state, reward = Board.move(s, i)
+				if new_state == s: continue
+				value = self.estimator.predict(sess, np.expand_dims(Board.get_arrayboard(new_state), 0))[0]
+				if value + reward > best_val:
+					best_val = value + reward
+					best_dir = i
+			best_dirs.append(best_dir)
+		return best_dirs
 

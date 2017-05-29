@@ -37,17 +37,18 @@ class Game(object):
 				space[num] = i
 				num += 1
 		if (num > 0):
-			self.state = self.board.set(self.state, np.int(space[np.random.randint(100) % num]), 2 if np.random.randint(4) == 0 else 1 )
+			self.state = self.board.set(self.state, np.int(space[np.random.randint(100) % num]), 2 if np.random.randint(10) == 0 else 1 )
 
 	# def game_start(self):
 	def move(self, direction):
 		self.previous_state = self.state
 		self.state, reward = Board.move(self.state, direction)
-		done = self.is_teminate()
+		after_state = self.state
 		self.illegal_count = 1 if reward < 0 else 0
 		self.score += reward
 		self.add_random_tile()
-		return self.previous_state, self.state, reward, done
+		done = self.is_teminate()
+		return self.previous_state, after_state, self.state, reward, done
 		
 	def printboard(self):
 		print("-------------------------------------")
