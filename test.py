@@ -10,7 +10,7 @@ from Game import Game
 max_iteration = 10
 initial_epsilon = 0.01
 # replay memory
-checkpoint_path = "log/checkpoint/-4500"
+checkpoint_path = "log/checkpoint/-16000"
 is_load_model = True
 
 def main(_):
@@ -25,7 +25,7 @@ def main(_):
         # Load a previous checkpoint if we find one
         if is_load_model == True: saver.restore(sess, checkpoint_path)
 
-        for iteration in xrange(max_iteration):
+        for iteration in range(max_iteration):
             game.initialize()
             while(True):
                 print("current state: ")

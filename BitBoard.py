@@ -17,7 +17,7 @@ UP = 0
 RIGHT = 1
 DOWN = 2
 LEFT = 3
-penalty = -1
+penalty = -20
 class MoveTable(object):
 
 	def __init__(self):
@@ -26,7 +26,7 @@ class MoveTable(object):
 		self.movetable[:] = 0x0
 		self.scoretable = np.zeros(1<<16, dtype = np.int64)
 
-		for r in xrange(1<<16):
+		for r in range(1<<16):
 			V = [ (r >> 0) & 0x0f, (r >> 4) & 0x0f, (r >> 8) & 0x0f, (r >> 12) & 0x0f ]
 			L = [ V[0], V[1], V[2], V[3]]
 			score = self.mvleft(L)
@@ -37,7 +37,7 @@ class MoveTable(object):
 		top = 0
 		tmp = 0
 		score = 0
-		for i in xrange(4):
+		for i in range(4):
 			tile = row[i]
 			if tile == 0:
 				continue
@@ -130,7 +130,7 @@ class Board(object):
 		state = int(state)
 		score = movetable.scoretable[Board.fetch(state,0)] + movetable.scoretable[Board.fetch(state,1)] + movetable.scoretable[Board.fetch(state,2)] + movetable.scoretable[Board.fetch(state,3)]
 		new_state = 0x0
-		for i in xrange(4):
+		for i in range(4):
 			new_state |= np.int(movetable.movetable[Board.fetch(state,i)] * (1 << (16*i)))
 		if(new_state == state):
 			return state,penalty
@@ -141,8 +141,8 @@ class Board(object):
 	# def printboard(state):
 		# state = int(state)
 		# print("-------------------------------------")
-		# for i in xrange(4):
-		# 	for j in xrange(4):
+		# for i in range(4):
+		# 	for j in range(4):
 		# 		print(" %5d " % Board.at(state,i*4+j) , end = "")
 		# 	print("")
 		# print("-------------------------------------")
@@ -193,7 +193,7 @@ class Board(object):
 	# 	space = np.zeros([16])
 	# 	space[:] = 0x0
 	# 	num = 0
-	# 	for i in xrange(16):
+	# 	for i in range(16):
 	# 		if(Board.at(state,i) == 0):
 	# 			space[num] = i
 	# 			num += 1
@@ -205,7 +205,7 @@ class Board(object):
 	# def is_end(state):
 	# 	state = int(state)
 	# 	old_state = state
-	# 	for i in xrange(4):
+	# 	for i in range(4):
 	# 		state, reward = Board.move(state,i)
 	# 		if reward != penalty:
 	# 			return False
@@ -222,14 +222,21 @@ class Board(object):
 	def get_arrayboard(state):
 		state = int(state)
 		array_state = []
-		for i in xrange(16):
+		for i in range(16):
 			array_state.append(Board.at(state,i))
 		return array_state
 
 	@staticmethod
+	def get_bitboard(arraystate):
+		state = int(0)
+		for i in range(16):
+			state = Board.set(state, i, arraystate[i])
+		return state
+
+	@staticmethod
 	def get_feature_state(state):
 		# [origin, rotate right 1, rotate right 2, rotate left 1, mirror, flip, transpose, reverse]
-		# [  0   ,       1       ,        2      ,       3       ,   4   ,   5 ,     6    ,    7   ]
+		# [  0   ,	   1	   ,		2	  ,	   3	   ,   4   ,   5 ,	 6	,	7   ]
 		state = int(state)
 		smallest_state = state
 		operation_id = 0
@@ -267,7 +274,7 @@ class Board(object):
 	@staticmethod
 	def bitboard_operation(state, operation_id):
 		# [origin, rotate right 1, rotate right 2, rotate right 3, mirror, flip, transpose, reverse]
-		# [  0   ,       1       ,        2      ,       3       ,   4   ,   5 ,     6    ,    7   ]
+		# [  0   ,	   1	   ,		2	  ,	   3	   ,   4   ,   5 ,	 6	,	7   ]
 		if operation_id == 0:
 			return state
 		elif operation_id == 1:
@@ -291,9 +298,9 @@ class Board(object):
 	@staticmethod
 	def operation_id_to_action(operation_id, action):
 		# [origin, rotate right 1, rotate right 2, rotate right 3, mirror, flip, transpose, reverse]
-		# [  0   ,       1       ,        2      ,       3       ,   4   ,   5 ,     6    ,    7   ]
+		# [  0   ,	   1	   ,		2	  ,	   3	   ,   4   ,   5 ,	 6	,	7   ]
 		if operation_id < 4:
-			return ( action+4-operation_id) % 4
+			return (action+4-operation_id) % 4
 		elif operation_id == 4:
 			if action == 1:
 				return 3
@@ -329,3 +336,13 @@ class Board(object):
 		else:
 			print("[ERROR] No operation id %d" % operation_id)
 			return 0
+	# @staticmethod
+	# def get_maxtile(state):
+	# 	state = int(state)
+	# 	max_tile = 0
+	# 	for i in range(16):
+	# 		tile = Board.at(state,i)
+	# 		if tile > max_tile: max_tile = tile
+	# 	return max_tile
+
+

@@ -1,12 +1,12 @@
 import numpy as np
 from BitBoard import Board
-from DQN import DQN
+from VN import VN
 import tensorflow as tf
 class AI(object):
 
 	def __init__(self):
-		self.estimator = DQN(scope='estimator', summaries_dir = 'log')
-		self.target = DQN(scope='target', summaries_dir = None)
+		self.estimator = VN(scope='estimator', summaries_dir = 'log')
+		self.target = VN(scope='target', summaries_dir = None)
 		self.update_op = []
 
 		variables_estimator = [t for t in tf.trainable_variables() if t.name.startswith(self.estimator.scope)]
@@ -18,32 +18,39 @@ class AI(object):
 			self.update_op.append(op)
 
 	def getbestdirection(self, sess, state, epsilon):
-		# feature_state, op_id = Board.get_feature_state(state)
-		# array_state = Board.get_arrayboard(feature_state)
-		# best_dir = self.epsilon_policy(sess, array_state, epsilon)
-		# best_dir = Board.operation_id_to_action(op_id, best_dir)
-		best_dirs = self.epsilon_policy(sess, state, epsilon)
-		return best_dirs
+		best_dir, rewards, next_states = self.epsilon_policy(sess, state, epsilon)
+		return best_dir, rewards, next_states 
 
-	def update_estimator(self, sess, state, action, label, learning_rate):
-		loss = self.estimator.update(sess, state, action, label, learning_rate)
+	def update_estimator(self, sess, array_state, label, learning_rate):
+		loss = self.estimator.update(sess, array_state, label, learning_rate)
 		return loss
 
 	def update_target(self, sess):
 		sess.run(self.update_op)
 
 	def epsilon_policy(self, sess, state, epsilon):
-		best_dirs = []
-		for s in state:
-			best_dir = 0
-			best_val = -1
-			for i in range(4):
-				new_state, reward = Board.move(s, i)
-				if new_state == s: continue
-				value = self.estimator.predict(sess, np.expand_dims(Board.get_arrayboard(new_state), 0))[0]
-				if value + reward > best_val:
-					best_val = value + reward
-					best_dir = i
-			best_dirs.append(best_dir)
-		return best_dirs
+		action_prob = np.ones(4, dtype = float) * epsilon / 4
+		best_action = -1
+		max_value = -1
+		rewards = []
+		next_states = []
+		for i in range(4):
+			tmp_state, reward = Board.move(state, i)
+			rewards.append(reward)
+			#small_state, _ = Board.get_feature_state(tmp_state)
+			next_states.append(Board.get_arrayboard(tmp_state))
+			if reward < 0:
+				action_prob[i] = 0
+			else:
+				state_value = self.estimator.predict(sess, np.expand_dims(next_states[i], 0))[0]
+				future_reward = reward + state_value
+				if best_action == -1:
+					best_action = i
+					max_value = future_reward
+				elif max_value < future_reward:
+					best_action = i
+					max_value = future_reward
 
+		action_prob[best_action] += 1 - np.sum(action_prob)
+		action = np.random.choice(np.arange(len(action_prob)), p=action_prob)
+		return action, np.asarray(rewards), np.asarray(next_states)
